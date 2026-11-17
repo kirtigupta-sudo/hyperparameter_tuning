@@ -1,0 +1,1118 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!-- Hyperparameter Tuning tutorial -->
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Hyperparameter Tuning Lab</title>
+<style>
+/*
+  Layout concept: a single scrolling "lab notebook" — a narrow reading
+  column for prose, with full-width interactive panels breaking the
+  column whenever a concept needs a hands-on demo instead of a sentence.
+*/
+:root{
+  --bg:#f6f4ee;
+  --surface:#ffffff;
+  --surface-2:#efece1;
+  --fg:#1c2230;
+  --muted:#656d7a;
+  --border:#ddd7c7;
+  --accent:#3454d1;
+  --accent-soft:#e7ebfb;
+  --under:#3b82c4;
+  --good:#1f9d6b;
+  --over:#d6572f;
+  --code-bg:#1c2230;
+  --code-fg:#e7e9ee;
+  --font-display:'Space Grotesk',Inter,system-ui,sans-serif;
+  --font-body:'Inter',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+  padding-left: max(16px, env(safe-area-inset-left,0px));
+  padding-right: max(16px, env(safe-area-inset-right,0px));
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1420; --surface:#161d2b; --surface-2:#1c2436;
+    --fg:#e7e9ee; --muted:#9aa3b2; --border:#2a3350;
+    --accent:#8096ff; --accent-soft:#1d2550;
+    --under:#6fb3e8; --good:#4ad499; --over:#ff8a66;
+    --code-bg:#0b0f1a; --code-fg:#dfe3ee;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1420; --surface:#161d2b; --surface-2:#1c2436;
+  --fg:#e7e9ee; --muted:#9aa3b2; --border:#2a3350;
+  --accent:#8096ff; --accent-soft:#1d2550;
+  --under:#6fb3e8; --good:#4ad499; --over:#ff8a66;
+  --code-bg:#0b0f1a; --code-fg:#dfe3ee;
+  color-scheme: dark;
+}
+*{box-sizing:border-box;}
+body{
+  background:var(--bg); color:var(--fg);
+  font-family:var(--font-body);
+  line-height:1.6;
+  padding-bottom:4rem;
+}
+h1,h2,h3,h4{font-family:var(--font-display); text-wrap:balance; line-height:1.15; margin:0 0 .5rem;}
+h2{font-size:1.7rem; letter-spacing:-.01em;}
+h3{font-size:1.2rem;}
+p{margin:0 0 1rem; max-width:68ch;}
+a{color:var(--accent);}
+code, pre{font-family:var(--font-mono);}
+.wrap{max-width:860px; margin:0 auto; padding:0 1rem;}
+.full{max-width:1040px; margin:0 auto; padding:0 1rem;}
+
+/* ---- top bar ---- */
+.topbar{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:50;
+  background:color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--border);
+}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:60;background:var(--bg);}
+.topbar-inner{
+  max-width:1040px; margin:0 auto; padding:.7rem 1rem;
+  display:flex; align-items:center; gap:1.25rem; overflow-x:auto;
+}
+.brand{font-family:var(--font-display); font-weight:700; font-size:.95rem; white-space:nowrap; flex:none;}
+.brand span{color:var(--accent);}
+.navlinks{display:flex; gap:1rem; font-size:.82rem; white-space:nowrap;}
+.navlinks a{color:var(--muted); text-decoration:none; padding:.2rem 0; border-bottom:2px solid transparent;}
+.navlinks a:hover{color:var(--fg); border-color:var(--accent);}
+
+/* ---- hero ---- */
+.hero{padding:3rem 0 2rem;}
+.eyebrow{
+  display:inline-block; font-size:.72rem; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--accent); background:var(--accent-soft); padding:.25rem .6rem; border-radius:99px;
+  margin-bottom:1rem; font-weight:600;
+}
+.hero h1{font-size:clamp(1.9rem,4.5vw,2.7rem); max-width:18ch;}
+.hero p.lede{font-size:1.08rem; color:var(--muted); max-width:62ch;}
+.analogy{
+  display:flex; gap:1rem; margin-top:1.75rem; padding:1rem 1.1rem; background:var(--surface);
+  border:1px solid var(--border); border-radius:14px; align-items:flex-start;
+}
+.analogy .emoji{font-size:1.6rem; line-height:1;}
+
+/* ---- sections ---- */
+section{padding:2.75rem 0; border-top:1px solid var(--border);}
+section:first-of-type{border-top:none;}
+.kicker{font-size:.78rem; color:var(--muted); letter-spacing:.06em; text-transform:uppercase; font-weight:600; margin-bottom:.35rem;}
+
+/* ---- definition cards ---- */
+.def-grid{display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin:1.25rem 0;}
+@media (max-width:620px){.def-grid{grid-template-columns:1fr;}}
+.def-card{
+  background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:1.1rem 1.2rem;
+  min-width:0;
+}
+.def-card h3{margin-bottom:.4rem; display:flex; align-items:center; gap:.5rem;}
+.def-card .tag{
+  font-size:.68rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
+  padding:.15rem .5rem; border-radius:99px;
+}
+.tag.param{background:var(--accent-soft); color:var(--accent);}
+.tag.hyper{background:color-mix(in srgb, var(--over) 18%, var(--surface)); color:var(--over);}
+.def-card p{margin:0; font-size:.95rem; color:var(--muted);}
+.def-card .ex{margin-top:.6rem; font-size:.85rem; font-family:var(--font-mono); color:var(--fg); background:var(--surface-2); padding:.5rem .6rem; border-radius:8px;}
+
+/* ---- comparison table ---- */
+.tbl-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:12px; margin:1.25rem 0;}
+table{border-collapse:collapse; width:100%; min-width:520px; font-size:.9rem;}
+th,td{text-align:left; padding:.6rem .8rem; border-bottom:1px solid var(--border); vertical-align:top;}
+th{background:var(--surface-2); font-family:var(--font-display); font-weight:600; font-size:.82rem;}
+tr:last-child td{border-bottom:none;}
+td.p{color:var(--accent);}
+td.h{color:var(--over);}
+
+/* ---- callouts ---- */
+.callout{
+  border-radius:14px; padding:1rem 1.2rem; margin:1.25rem 0; border:1px solid var(--border);
+  background:var(--surface);
+}
+.callout.warn{border-color:color-mix(in srgb, var(--over) 45%, var(--border)); background:color-mix(in srgb, var(--over) 8%, var(--surface));}
+.callout.tip{border-color:color-mix(in srgb, var(--good) 45%, var(--border)); background:color-mix(in srgb, var(--good) 8%, var(--surface));}
+.callout .lbl{font-weight:700; font-family:var(--font-display); font-size:.85rem; margin-bottom:.3rem; display:flex; gap:.4rem; align-items:center;}
+.callout.warn .lbl{color:var(--over);}
+.callout.tip .lbl{color:var(--good);}
+.callout p:last-child{margin-bottom:0;}
+
+/* ---- panels (interactive) ---- */
+.panel{
+  background:var(--surface); border:1px solid var(--border); border-radius:18px;
+  padding:1.3rem; margin:1.5rem 0;
+}
+.panel h4{font-size:.95rem; margin-bottom:.15rem;}
+.panel .panel-sub{color:var(--muted); font-size:.85rem; margin-bottom:1rem;}
+.panel-grid{display:grid; grid-template-columns:1.15fr .85fr; gap:1.5rem; align-items:start;}
+@media (max-width:760px){.panel-grid{grid-template-columns:1fr;}}
+.controls{display:flex; flex-direction:column; gap:.9rem;}
+.ctrl-row{display:flex; flex-direction:column; gap:.35rem;}
+.ctrl-row label{font-size:.82rem; font-weight:600; display:flex; justify-content:space-between;}
+.ctrl-row label .val{font-family:var(--font-mono); color:var(--accent); font-weight:700;}
+input[type=range]{width:100%; accent-color:var(--accent);}
+.btn{
+  font-family:var(--font-body); font-weight:600; font-size:.85rem; border:1px solid var(--border);
+  background:var(--surface-2); color:var(--fg); border-radius:9px; padding:.5rem .9rem; cursor:pointer;
+}
+.btn:hover{border-color:var(--accent);}
+.btn.primary{background:var(--accent); color:#fff; border-color:var(--accent);}
+.btn.primary:hover{opacity:.92;}
+.btn:focus-visible, select:focus-visible, input:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+.stat-row{display:flex; gap:.6rem; flex-wrap:wrap;}
+.stat{
+  flex:1; min-width:110px; background:var(--surface-2); border-radius:10px; padding:.55rem .7rem;
+}
+.stat .k{font-size:.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:.04em;}
+.stat .v{font-family:var(--font-mono); font-size:1.05rem; font-weight:700;}
+.legend{display:flex; gap:1rem; flex-wrap:wrap; font-size:.78rem; color:var(--muted); margin-top:.6rem;}
+.legend span{display:inline-flex; align-items:center; gap:.35rem;}
+.sw{width:10px; height:10px; border-radius:3px; display:inline-block;}
+canvas{width:100%; display:block; border-radius:10px; background:var(--surface-2);}
+.readout{font-size:.85rem; color:var(--muted); margin-top:.6rem;}
+.readout b{color:var(--fg);}
+
+/* ---- code blocks ---- */
+.codeblock{position:relative; margin:1.25rem 0; border-radius:12px; overflow:hidden; border:1px solid var(--border);}
+.codeblock .cb-head{
+  display:flex; justify-content:space-between; align-items:center; background:var(--surface-2);
+  padding:.45rem .8rem; font-size:.75rem; color:var(--muted); font-family:var(--font-mono);
+}
+.codeblock pre{
+  margin:0; background:var(--code-bg); color:var(--code-fg); padding:1rem 1.1rem; overflow-x:auto;
+  font-size:.82rem; line-height:1.55;
+}
+.copy-btn{
+  font-size:.72rem; font-family:var(--font-body); font-weight:600; border:1px solid var(--border);
+  background:var(--surface); color:var(--fg); border-radius:7px; padding:.25rem .55rem; cursor:pointer;
+}
+.copy-btn:hover{border-color:var(--accent);}
+.tok-kw{color:#ff8ab0;} .tok-str{color:#8fd19e;} .tok-com{color:#7c8aa8;} .tok-num{color:#ffcc80;} .tok-fn{color:#82c7ff;}
+
+/* ---- kfold grid ---- */
+.fold-row{display:flex; gap:4px; margin:.3rem 0;}
+.fold-cell{flex:1; height:30px; border-radius:6px; background:var(--surface-2); border:1px solid var(--border);}
+.fold-cell.train{background:var(--accent-soft);}
+.fold-cell.val{background:var(--accent); }
+
+/* ---- search grid ---- */
+.search-grid-wrap{overflow-x:auto;}
+.search-grid{display:grid; gap:3px;}
+.cell{
+  aspect-ratio:1; border-radius:5px; background:var(--surface-2); border:1px solid var(--border);
+  display:flex; align-items:center; justify-content:center; font-size:.6rem; color:var(--muted);
+  transition:transform .15s ease;
+}
+.cell.hit{border-color:var(--accent);}
+.cell.best{outline:2px solid var(--good); outline-offset:-2px; font-weight:700; color:var(--fg);}
+
+/* ---- cheat sheet ---- */
+.cheat-grid{display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:1rem;}
+@media (max-width:620px){.cheat-grid{grid-template-columns:1fr;}}
+.cheat-card{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:1rem 1.1rem;}
+.cheat-card ul{margin:.4rem 0 0; padding-left:1.1rem; font-size:.9rem; color:var(--muted);}
+.cheat-card li{margin-bottom:.35rem;}
+
+footer{max-width:860px; margin:0 auto; padding:2rem 1rem 0; color:var(--muted); font-size:.85rem; border-top:1px solid var(--border); margin-top:1rem;}
+.glossary dt{font-weight:700; font-family:var(--font-display); margin-top:.8rem;}
+.glossary dd{margin:.1rem 0 0; color:var(--muted);}
+.badge-row{display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.5rem;}
+.ds-card{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:1.1rem 1.2rem; margin:1rem 0;}
+.ds-card h4{margin-bottom:.3rem;}
+.ds-cols{display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.6rem;}
+.col-chip{font-family:var(--font-mono); font-size:.76rem; background:var(--surface-2); padding:.2rem .5rem; border-radius:6px; border:1px solid var(--border);}
+</style>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">hyperparameter<span>::</span>tuning</div>
+    <div class="navlinks">
+      <a href="#params">Parameters vs. hyperparameters</a>
+      <a href="#fitting">Overfitting &amp; underfitting</a>
+      <a href="#cv">Cross-validation</a>
+      <a href="#search">Grid vs. randomized search</a>
+      <a href="#code">Code walkthrough</a>
+      <a href="#cheatsheet">Cheat sheet</a>
+    </div>
+  </div>
+</div>
+
+<div class="wrap hero">
+  <span class="eyebrow">Lesson 5 &middot; after model evaluation</span>
+  <h1>Getting a model to fit <em>your</em> data — without memorizing it</h1>
+  <p class="lede">So far you've trained models and scored them. This lesson is about the gap between those two steps: a model's own knobs don't tune themselves, and the wrong setting can make an otherwise good algorithm fit beautifully on paper and fail in the real world.</p>
+  <div class="analogy">
+    <div class="emoji">🎸</div>
+    <div>
+      <strong>Think of it like tuning a guitar.</strong> The strings (your training data) are fixed. Where you press the fret — how tight you turn the tuning peg — changes the sound without changing the string. Those pegs are <em>hyperparameters</em>: settings you choose before the model ever touches the data. Everything the model then <em>learns</em> from the data (the actual note that comes out, so to speak) is a <em>parameter</em>.
+    </div>
+  </div>
+</div>
+
+<section id="params">
+  <div class="wrap">
+    <div class="kicker">Core distinction</div>
+    <h2>Parameters vs. hyperparameters</h2>
+    <p>Every model has two very different kinds of numbers attached to it. Mixing them up is the single most common point of confusion when people start tuning models, so it's worth nailing down before anything else.</p>
+
+    <div class="def-grid">
+      <div class="def-card">
+        <h3><span class="tag param">Parameter</span></h3>
+        <p>A value the model <strong>learns from the training data</strong> by running its fitting algorithm. You never set these by hand — <code>.fit()</code> finds them for you.</p>
+        <div class="ex">LinearRegression: coef_, intercept_</div>
+      </div>
+      <div class="def-card">
+        <h3><span class="tag hyper">Hyperparameter</span></h3>
+        <p>A setting <strong>you choose before training starts</strong>, which controls <em>how</em> the model learns. It isn't found in the data — it's an input to the algorithm itself.</p>
+        <div class="ex">KNeighborsClassifier(n_neighbors=5)</div>
+      </div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Model</th><th>Parameters (learned)</th><th>Hyperparameters (chosen)</th></tr></thead>
+        <tbody>
+          <tr><td>Linear / Ridge Regression</td><td class="p">coefficients, intercept</td><td class="h">alpha (regularization strength)</td></tr>
+          <tr><td>Logistic Regression</td><td class="p">coefficients, intercept</td><td class="h">C (inverse regularization strength), penalty</td></tr>
+          <tr><td>K-Nearest Neighbors</td><td class="p">the stored training points themselves — there's no equation to fit</td><td class="h">n_neighbors (k), weights, distance metric (p)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>KNN is the odd one out, and that's instructive: it doesn't really <em>learn</em> parameters at all — it just memorizes the training set and does arithmetic on it at prediction time. Every bit of its behavior is governed by hyperparameters. That makes it a great model for seeing hyperparameter effects with nothing else in the way.</p>
+
+    <div class="callout tip">
+      <div class="lbl">💡 Rule of thumb</div>
+      <p>If it shows up inside the parentheses when you create the model — <code>Ridge(alpha=...)</code>, <code>KNeighborsClassifier(n_neighbors=...)</code> — it's a hyperparameter. If it only exists after you call <code>.fit()</code> — and ends with an underscore in scikit-learn, like <code>coef_</code> — it's a parameter.</p>
+    </div>
+
+    <h3>See it: degree is a hyperparameter, the coefficients are parameters</h3>
+    <p>Below, a curve is being fit to some noisy data using polynomial regression. The <strong>degree</strong> slider is a hyperparameter — you pick it. Once you pick it, fitting works out the actual coefficients for you — those are the parameters, printed under the chart. Drag the slider and watch both change.</p>
+
+    <div class="panel" id="panel-poly">
+      <h4>Polynomial fit playground</h4>
+      <div class="panel-sub">22 training points (blue) from a noisy curve. Try degree 1 (a line) up to degree 9.</div>
+      <div class="panel-grid">
+        <div>
+          <canvas id="polyCanvas" width="640" height="360" role="img" aria-label="Scatter plot with a fitted polynomial curve"></canvas>
+          <div class="legend">
+            <span><span class="sw" style="background:var(--under)"></span>training points</span>
+            <span><span class="sw" style="background:var(--accent)"></span>fitted curve</span>
+          </div>
+        </div>
+        <div class="controls">
+          <div class="ctrl-row">
+            <label>Polynomial degree (hyperparameter) <span class="val" id="degVal">3</span></label>
+            <input type="range" id="degSlider" min="1" max="9" step="1" value="3">
+          </div>
+          <div class="stat-row">
+            <div class="stat"><div class="k">Train RMSE</div><div class="v" id="trainRmse">–</div></div>
+          </div>
+          <div class="readout">Learned parameters (coefficients, low→high power):</div>
+          <div class="codeblock" style="margin:0;">
+            <pre id="coefOut" style="font-size:.72rem; padding:.7rem .8rem;">–</pre>
+          </div>
+          <p class="readout">Notice: the <b>degree</b> never changes once you fit — it's fixed input. The <b>coefficients</b> change completely every time, because they're re-learned from the data for whatever degree you asked for.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="fitting">
+  <div class="wrap">
+    <div class="kicker">Why tuning matters</div>
+    <h2>Underfitting, overfitting, and the sweet spot</h2>
+    <p>Here's the part that makes hyperparameter tuning necessary rather than optional: the <em>same</em> model, trained on the <em>same</em> data, can fail in two opposite ways — purely because of how its hyperparameters were set.</p>
+
+    <div class="def-grid">
+      <div class="def-card">
+        <h3 style="color:var(--under)">Underfitting</h3>
+        <p>The model is too simple to capture the real pattern in the data. It does poorly on training data <em>and</em> new data alike.</p>
+        <div class="ex">degree = 1 on a curved pattern</div>
+      </div>
+      <div class="def-card">
+        <h3 style="color:var(--over)">Overfitting</h3>
+        <p>The model is so flexible it starts fitting the <em>noise</em> in the training data — it memorizes quirks instead of the underlying trend. Training score looks great; new data is a different story.</p>
+        <div class="ex">degree = 9 on 22 noisy points</div>
+      </div>
+    </div>
+
+    <p>The property we actually want is <strong>generalization</strong>: performing well on data the model has never seen, not just the data it was trained on. We approximate "never seen" data during development by holding some data back as a <strong>test set</strong> — which is exactly why it's a mistake to let the model, or your tuning process, peek at it before the very end.</p>
+
+    <div class="panel" id="panel-fit2">
+      <h4>Same playground, now with a held-out test set</h4>
+      <div class="panel-sub">Orange points were <em>not</em> used to fit the curve. Drag the degree slider and watch what happens to each error as the curve gets more flexible.</div>
+      <div class="panel-grid">
+        <div>
+          <canvas id="polyCanvas2" width="640" height="360" role="img" aria-label="Scatter plot with training and test points and a fitted curve"></canvas>
+          <div class="legend">
+            <span><span class="sw" style="background:var(--under)"></span>train</span>
+            <span><span class="sw" style="background:var(--over)"></span>test (held out)</span>
+            <span><span class="sw" style="background:var(--accent)"></span>fitted curve</span>
+          </div>
+        </div>
+        <div class="controls">
+          <div class="ctrl-row">
+            <label>Polynomial degree <span class="val" id="degVal2">3</span></label>
+            <input type="range" id="degSlider2" min="1" max="9" step="1" value="3">
+          </div>
+          <div class="stat-row">
+            <div class="stat"><div class="k">Train RMSE</div><div class="v" id="trainRmse2">–</div></div>
+            <div class="stat"><div class="k">Test RMSE</div><div class="v" id="testRmse2">–</div></div>
+          </div>
+          <canvas id="errCurve" width="300" height="140" aria-label="Train and test error vs degree"></canvas>
+          <div class="legend">
+            <span><span class="sw" style="background:var(--under)"></span>train error</span>
+            <span><span class="sw" style="background:var(--over)"></span>test error</span>
+          </div>
+          <p class="readout" id="fitVerdict"></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <div class="lbl">⚠️ The pattern to watch for</div>
+      <p>As degree increases, <strong>training error keeps dropping</strong> — a more flexible model can always fit the training points better, right up to memorizing them. But <strong>test error forms a U-shape</strong>: it falls while the model is learning real structure, then rises again once it starts fitting noise. The bottom of that U is the hyperparameter setting we actually want — and cross-validation, next, is how we find it without cheating by looking at the test set.</p>
+    </div>
+  </div>
+</section>
+
+<section id="cv">
+  <div class="wrap">
+    <div class="kicker">Finding the sweet spot honestly</div>
+    <h2>Cross-validation</h2>
+    <p>You might think: "fine, I'll just try a few hyperparameter values and keep whichever gives the best test score." That's the mistake. The moment you use the test set to <em>choose</em> a hyperparameter, it stops being a fair, untouched measure of generalization — you've quietly let the model's configuration adapt to it. This is called <strong>data leakage</strong>, and it will make your reported performance a lie.</p>
+
+    <p>The fix is <strong>cross-validation (CV)</strong>: carve out a validation set from the <em>training</em> data only, tune against that, and save the real test set for one final, honest check at the very end.</p>
+
+    <div class="callout warn">
+      <div class="lbl">⚠️ A single train/validation split isn't enough either</div>
+      <p>With a small dataset, which points happen to land in your validation split can swing the score a lot — by luck, not by model quality. Click a few times below to reshuffle a single 80/20 split on the same 50 points and watch the "validation score" jump around, even though nothing about the model changed.</p>
+    </div>
+
+    <div class="panel" id="panel-shuffle">
+      <h4>One split is a roll of the dice</h4>
+      <div class="controls" style="flex-direction:row; align-items:center; flex-wrap:wrap; gap:.75rem;">
+        <button class="btn primary" id="reshuffleBtn">🎲 Reshuffle the split</button>
+        <div class="stat" style="min-width:160px;"><div class="k">Validation RMSE this split</div><div class="v" id="shuffleRmse">–</div></div>
+        <div class="stat" style="min-width:160px;"><div class="k">Range seen so far</div><div class="v" id="shuffleRange">–</div></div>
+      </div>
+    </div>
+
+    <p>Cross-validation's answer: don't rely on <em>one</em> split — use <em>several</em>, and average the result. Specifically, <strong>k-fold cross-validation</strong> splits the training data into <code>k</code> equal chunks ("folds"). It then trains <code>k</code> times, each time holding out a <em>different</em> fold as the validation set and training on the rest. Every data point gets used for validation exactly once, and the final CV score is the average across all <code>k</code> runs — much more stable than any single split.</p>
+
+    <div class="panel" id="panel-kfold">
+      <h4>K-fold cross-validation, step by step</h4>
+      <div class="panel-sub">Choose k, then step through the folds. The highlighted block is held out for validation on that round; the rest is used for training.</div>
+      <div class="controls" style="margin-bottom:1rem;">
+        <div class="ctrl-row" style="max-width:260px;">
+          <label>Number of folds (k) <span class="val" id="kVal">5</span></label>
+          <input type="range" id="kSlider" min="3" max="10" step="1" value="5">
+        </div>
+      </div>
+      <div id="foldViz"></div>
+      <div style="display:flex; gap:.6rem; align-items:center; margin-top:.9rem; flex-wrap:wrap;">
+        <button class="btn" id="prevFold">← Prev fold</button>
+        <button class="btn" id="nextFold">Next fold →</button>
+        <span class="readout" id="foldReadout" style="margin:0;"></span>
+      </div>
+      <div class="legend" style="margin-top:.8rem;">
+        <span><span class="sw" style="background:var(--accent-soft); border:1px solid var(--border);"></span>training fold</span>
+        <span><span class="sw" style="background:var(--accent)"></span>validation fold (held out this round)</span>
+      </div>
+      <div class="stat-row" style="margin-top:1rem;">
+        <div class="stat"><div class="k">Mean CV score (illustrative)</div><div class="v" id="meanCv">–</div></div>
+        <div class="stat"><div class="k">Std across folds</div><div class="v" id="stdCv">–</div></div>
+      </div>
+    </div>
+
+    <h3>Terms worth knowing</h3>
+    <dl class="glossary">
+      <dt>Fold</dt><dd>One of the k equal-sized chunks the training data is split into.</dd>
+      <dt>Validation set</dt><dd>Data held out from training to check performance <em>during</em> tuning. Different from the test set, which is touched only once, at the end.</dd>
+      <dt>cv score / cv_results_</dt><dd>In scikit-learn, the mean (and per-fold) score across all folds for a given hyperparameter setting.</dd>
+      <dt>Stratified k-fold</dt><dd>For classification, a version of k-fold that keeps the class proportions roughly the same in every fold — important when classes are imbalanced, like the churn dataset below. scikit-learn's classifiers use this automatically when you pass <code>cv=5</code>.</dd>
+    </dl>
+  </div>
+</section>
+
+<section id="search">
+  <div class="wrap">
+    <div class="kicker">Automating the search</div>
+    <h2>GridSearchCV vs. RandomizedSearchCV</h2>
+    <p>Now combine the two ideas: cross-validation gives you a trustworthy score for <em>one</em> hyperparameter setting; a <strong>search strategy</strong> decides <em>which settings to try</em>. scikit-learn gives you two main ones.</p>
+
+    <div class="def-grid">
+      <div class="def-card">
+        <h3>Grid Search <span class="tag hyper" style="background:var(--accent-soft); color:var(--accent);">exhaustive</span></h3>
+        <p>You list out candidate values for each hyperparameter. Grid search tries <strong>every combination</strong>, cross-validating each one, and reports the best.</p>
+        <div class="ex">6 alphas × 5 k's = 30 fits (× k CV folds each)</div>
+      </div>
+      <div class="def-card">
+        <h3>Randomized Search <span class="tag hyper">sampled</span></h3>
+        <p>You describe a range or distribution for each hyperparameter. It <strong>randomly samples</strong> a fixed number of combinations (<code>n_iter</code>) instead of trying all of them.</p>
+        <div class="ex">n_iter=15 out of thousands of combinations</div>
+      </div>
+    </div>
+
+    <p>Why would you ever want a search that <em>doesn't</em> check everything? Because the number of combinations explodes fast — add one more hyperparameter with 10 options and your grid just got 10× bigger. Randomized search trades a (small, usually acceptable) chance of missing the exact optimum for the ability to search a much larger, finer-grained space in the same compute budget.</p>
+
+    <div class="panel" id="panel-search">
+      <h4>Same search space, two strategies</h4>
+      <div class="panel-sub">A toy 2-hyperparameter space (α horizontally, k vertically). Brighter cells score better. Run each strategy and compare how much of the grid gets checked.</div>
+      <div style="display:flex; gap:.6rem; margin-bottom:.9rem; flex-wrap:wrap;">
+        <button class="btn primary" id="runGrid">▦ Run Grid Search</button>
+        <button class="btn primary" id="runRandom">✦ Run Randomized Search (n_iter=10)</button>
+        <button class="btn" id="resetSearch">Reset</button>
+      </div>
+      <div class="search-grid-wrap">
+        <div class="search-grid" id="searchGrid" style="grid-template-columns:repeat(6, 44px);"></div>
+      </div>
+      <div class="stat-row" style="margin-top:1rem;">
+        <div class="stat"><div class="k">Combinations checked</div><div class="v" id="searchChecked">0</div></div>
+        <div class="stat"><div class="k">Best score found</div><div class="v" id="searchBest">–</div></div>
+        <div class="stat"><div class="k">Total fits run (× 5 CV folds)</div><div class="v" id="searchFits">0</div></div>
+      </div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>&nbsp;</th><th>GridSearchCV</th><th>RandomizedSearchCV</th></tr></thead>
+        <tbody>
+          <tr><td>Coverage</td><td>Every combination in the grid</td><td>A fixed number of random draws</td></tr>
+          <tr><td>Cost</td><td>Grows multiplicatively with each added hyperparameter</td><td>You control the budget directly via <code>n_iter</code></td></tr>
+          <tr><td>Best for</td><td>Small search spaces, final fine-tuning</td><td>Large or continuous search spaces, early exploration</td></tr>
+          <tr><td>Guarantee</td><td>Finds the best combo <em>within your grid</em></td><td>No guarantee, but often finds a near-best combo far cheaper</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout tip">
+      <div class="lbl">💡 A common workflow</div>
+      <p>Use RandomizedSearchCV first to explore a wide range cheaply and narrow down where the good values live, then run a small GridSearchCV around that narrowed region to pin down the best setting precisely.</p>
+    </div>
+  </div>
+</section>
+
+<section id="code">
+  <div class="wrap full">
+    <div class="kicker">Hands-on</div>
+    <h2>Tuning real models with scikit-learn</h2>
+    <p>Two datasets accompany this lesson — download them alongside this page and keep them in the same folder as your notebook or script.</p>
+
+    <div class="ds-card">
+      <h4>📈 <code>student_exam_scores.csv</code> — regression</h4>
+      <p style="margin:0;">200 students. Predict <code>exam_score</code> from study habits. Used for Linear/Ridge Regression and KNN Regressor.</p>
+      <div class="ds-cols">
+        <span class="col-chip">study_hours</span><span class="col-chip">sleep_hours</span>
+        <span class="col-chip">attendance_pct</span><span class="col-chip">prior_test_score</span>
+        <span class="col-chip">exam_score (target)</span>
+      </div>
+    </div>
+    <div class="ds-card">
+      <h4>📉 <code>customer_churn.csv</code> — classification</h4>
+      <p style="margin:0;">300 customers. Predict <code>churn</code> (1 = left) from account behavior. Used for Logistic Regression and KNN Classifier.</p>
+      <div class="ds-cols">
+        <span class="col-chip">tenure_months</span><span class="col-chip">monthly_charge</span>
+        <span class="col-chip">support_calls</span><span class="col-chip">contract_type (0/1/2)</span>
+        <span class="col-chip">churn (target)</span>
+      </div>
+    </div>
+
+    <h3 style="margin-top:2rem;">1. Load, split — and don't touch the test set again</h3>
+    <p>The test set gets carved off first and is not seen again until the very last line of the notebook.</p>
+    <div class="codeblock">
+      <div class="cb-head"><span>setup.py</span><button class="copy-btn" data-copy="cb1">Copy</button></div>
+      <pre id="cb1"><span class="tok-kw">import</span> pandas <span class="tok-kw">as</span> pd
+<span class="tok-kw">from</span> sklearn.model_selection <span class="tok-kw">import</span> train_test_split
+<span class="tok-kw">from</span> sklearn.pipeline <span class="tok-kw">import</span> Pipeline
+<span class="tok-kw">from</span> sklearn.preprocessing <span class="tok-kw">import</span> StandardScaler
+
+df = pd.read_csv(<span class="tok-str">"student_exam_scores.csv"</span>)
+X = df.drop(columns=[<span class="tok-str">"exam_score"</span>])
+y = df[<span class="tok-str">"exam_score"</span>]
+
+<span class="tok-com"># test_size=0.2 -> 20% locked away until the final evaluation</span>
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=<span class="tok-num">0.2</span>, random_state=<span class="tok-num">42</span>
+)</pre>
+    </div>
+
+    <div class="callout tip">
+      <div class="lbl">💡 Why wrap everything in a Pipeline</div>
+      <p>KNN and regularized linear models are sensitive to feature scale — a feature measured in the hundreds will dominate distance calculations or penalty terms over one measured in single digits. A <code>Pipeline</code> bundles scaling and the model together so that, during cross-validation, scaling is re-fit on each training fold only — never on the fold being validated. Fitting the scaler on the full dataset first would leak information from the validation fold.</p>
+    </div>
+
+    <h3>2. GridSearchCV on Ridge Regression — tuning <code>alpha</code></h3>
+    <p><code>alpha</code> controls regularization strength: higher values shrink coefficients more, trading a little training fit for better generalization. It's a single, well-behaved hyperparameter — a textbook case for an exhaustive grid.</p>
+    <div class="codeblock">
+      <div class="cb-head"><span>ridge_grid_search.py</span><button class="copy-btn" data-copy="cb2">Copy</button></div>
+      <pre id="cb2"><span class="tok-kw">from</span> sklearn.linear_model <span class="tok-kw">import</span> Ridge
+<span class="tok-kw">from</span> sklearn.model_selection <span class="tok-kw">import</span> GridSearchCV
+
+pipe = Pipeline([
+    (<span class="tok-str">"scaler"</span>, StandardScaler()),
+    (<span class="tok-str">"ridge"</span>, Ridge())
+])
+
+param_grid = {<span class="tok-str">"ridge__alpha"</span>: [<span class="tok-num">0.01</span>, <span class="tok-num">0.1</span>, <span class="tok-num">1</span>, <span class="tok-num">10</span>, <span class="tok-num">50</span>, <span class="tok-num">100</span>]}
+
+grid = GridSearchCV(
+    pipe, param_grid,
+    cv=<span class="tok-num">5</span>,                                  <span class="tok-com"># 5-fold CV on the training set only</span>
+    scoring=<span class="tok-str">"neg_root_mean_squared_error"</span>
+)
+grid.fit(X_train, y_train)
+
+<span class="tok-fn">print</span>(<span class="tok-str">"Best alpha:"</span>, grid.best_params_)
+<span class="tok-fn">print</span>(<span class="tok-str">"Best CV RMSE:"</span>, -grid.best_score_)</pre>
+    </div>
+    <p style="font-size:.88rem; color:var(--muted);">Running this on <code>student_exam_scores.csv</code> picks <code>alpha=1</code> with a CV RMSE around <strong>6.0</strong> — barely different from plain, unregularized linear regression here, because with only four well-behaved features there isn't much overfitting to correct for. The payoff of tuning is bigger as models and feature sets grow.</p>
+
+    <h3>3. RandomizedSearchCV on a KNN Regressor</h3>
+    <p>KNN has three hyperparameters worth tuning together — <code>n_neighbors</code>, <code>weights</code>, and the distance metric <code>p</code> — and their effects interact, so trying every combination is wasteful. This is a good spot for a randomized search.</p>
+    <div class="codeblock">
+      <div class="cb-head"><span>knn_randomized_search.py</span><button class="copy-btn" data-copy="cb3">Copy</button></div>
+      <pre id="cb3"><span class="tok-kw">from</span> sklearn.neighbors <span class="tok-kw">import</span> KNeighborsRegressor
+<span class="tok-kw">from</span> sklearn.model_selection <span class="tok-kw">import</span> RandomizedSearchCV
+
+pipe_knn = Pipeline([
+    (<span class="tok-str">"scaler"</span>, StandardScaler()),
+    (<span class="tok-str">"knn"</span>, KNeighborsRegressor())
+])
+
+param_dist = {
+    <span class="tok-str">"knn__n_neighbors"</span>: <span class="tok-fn">list</span>(<span class="tok-fn">range</span>(<span class="tok-num">2</span>, <span class="tok-num">30</span>)),   <span class="tok-com"># how many neighbors to average</span>
+    <span class="tok-str">"knn__weights"</span>:     [<span class="tok-str">"uniform"</span>, <span class="tok-str">"distance"</span>],
+    <span class="tok-str">"knn__p"</span>:           [<span class="tok-num">1</span>, <span class="tok-num">2</span>]                   <span class="tok-com"># 1=Manhattan, 2=Euclidean</span>
+}
+
+random_search = RandomizedSearchCV(
+    pipe_knn, param_dist,
+    n_iter=<span class="tok-num">15</span>,                              <span class="tok-com"># only 15 of the ~560 combinations</span>
+    cv=<span class="tok-num">5</span>,
+    scoring=<span class="tok-str">"neg_root_mean_squared_error"</span>,
+    random_state=<span class="tok-num">42</span>
+)
+random_search.fit(X_train, y_train)
+
+<span class="tok-fn">print</span>(<span class="tok-str">"Best params:"</span>, random_search.best_params_)
+<span class="tok-fn">print</span>(<span class="tok-str">"Best CV RMSE:"</span>, -random_search.best_score_)</pre>
+    </div>
+    <p style="font-size:.88rem; color:var(--muted);">15 random draws out of 28 × 2 × 2 = 112 total combinations typically land on something close to <code>n_neighbors≈3</code>, <code>p=1</code> — found in a fraction of the time a full grid search over the same space would take.</p>
+
+    <h3>4. Only now — evaluate on the untouched test set</h3>
+    <div class="codeblock">
+      <div class="cb-head"><span>final_eval.py</span><button class="copy-btn" data-copy="cb4">Copy</button></div>
+      <pre id="cb4"><span class="tok-kw">from</span> sklearn.metrics <span class="tok-kw">import</span> mean_squared_error
+
+best_model = grid.best_estimator_         <span class="tok-com"># refit=True by default -> already fit on all of X_train</span>
+predictions = best_model.predict(X_test)
+test_rmse = mean_squared_error(y_test, predictions) ** <span class="tok-num">0.5</span>
+
+<span class="tok-fn">print</span>(<span class="tok-str">"Final test RMSE:"</span>, test_rmse)   <span class="tok-com"># the one number you report</span></pre>
+    </div>
+
+    <h3>5. Classification: GridSearchCV on Logistic Regression's <code>C</code></h3>
+    <p>Same recipe, different task. <code>C</code> is the inverse of regularization strength for logistic regression — small <code>C</code> means stronger regularization (simpler decision boundary).</p>
+    <div class="codeblock">
+      <div class="cb-head"><span>logreg_grid_search.py</span><button class="copy-btn" data-copy="cb5">Copy</button></div>
+      <pre id="cb5"><span class="tok-kw">from</span> sklearn.linear_model <span class="tok-kw">import</span> LogisticRegression
+
+df2 = pd.read_csv(<span class="tok-str">"customer_churn.csv"</span>)
+X2 = df2.drop(columns=[<span class="tok-str">"churn"</span>])
+y2 = df2[<span class="tok-str">"churn"</span>]
+
+X2_train, X2_test, y2_train, y2_test = train_test_split(
+    X2, y2, test_size=<span class="tok-num">0.2</span>, random_state=<span class="tok-num">42</span>, stratify=y2
+)
+
+pipe_log = Pipeline([
+    (<span class="tok-str">"scaler"</span>, StandardScaler()),
+    (<span class="tok-str">"logreg"</span>, LogisticRegression(max_iter=<span class="tok-num">1000</span>))
+])
+
+param_grid_log = {<span class="tok-str">"logreg__C"</span>: [<span class="tok-num">0.001</span>, <span class="tok-num">0.01</span>, <span class="tok-num">0.1</span>, <span class="tok-num">1</span>, <span class="tok-num">10</span>, <span class="tok-num">100</span>]}
+
+grid_log = GridSearchCV(pipe_log, param_grid_log, cv=<span class="tok-num">5</span>, scoring=<span class="tok-str">"accuracy"</span>)
+grid_log.fit(X2_train, y2_train)
+
+<span class="tok-fn">print</span>(<span class="tok-str">"Best C:"</span>, grid_log.best_params_, <span class="tok-str">"| CV accuracy:"</span>, grid_log.best_score_)</pre>
+    </div>
+    <p style="font-size:.88rem; color:var(--muted);"><code>stratify=y2</code> keeps the churn/no-churn ratio consistent across the train/test split and every CV fold — important here since only ~39% of customers churned.</p>
+
+    <h3>6. RandomizedSearchCV on a KNN Classifier</h3>
+    <div class="codeblock">
+      <div class="cb-head"><span>knn_clf_randomized_search.py</span><button class="copy-btn" data-copy="cb6">Copy</button></div>
+      <pre id="cb6"><span class="tok-kw">from</span> sklearn.neighbors <span class="tok-kw">import</span> KNeighborsClassifier
+
+pipe_knn_clf = Pipeline([
+    (<span class="tok-str">"scaler"</span>, StandardScaler()),
+    (<span class="tok-str">"knn"</span>, KNeighborsClassifier())
+])
+
+param_dist_clf = {
+    <span class="tok-str">"knn__n_neighbors"</span>: <span class="tok-fn">list</span>(<span class="tok-fn">range</span>(<span class="tok-num">2</span>, <span class="tok-num">30</span>)),
+    <span class="tok-str">"knn__weights"</span>:     [<span class="tok-str">"uniform"</span>, <span class="tok-str">"distance"</span>]
+}
+
+random_clf = RandomizedSearchCV(
+    pipe_knn_clf, param_dist_clf,
+    n_iter=<span class="tok-num">15</span>, cv=<span class="tok-num">5</span>, scoring=<span class="tok-str">"accuracy"</span>, random_state=<span class="tok-num">42</span>
+)
+random_clf.fit(X2_train, y2_train)
+
+<span class="tok-fn">print</span>(<span class="tok-str">"Best params:"</span>, random_clf.best_params_, <span class="tok-str">"| CV accuracy:"</span>, random_clf.best_score_)</pre>
+    </div>
+
+    <h3>Inspecting every combination tried</h3>
+    <p>Both search objects store the full result table, which is often more useful than just <code>best_params_</code> — you can see how sensitive the score actually was to each hyperparameter.</p>
+    <div class="codeblock">
+      <div class="cb-head"><span>inspect_results.py</span><button class="copy-btn" data-copy="cb7">Copy</button></div>
+      <pre id="cb7">results = pd.DataFrame(grid.cv_results_)
+<span class="tok-fn">print</span>(results[[<span class="tok-str">"param_ridge__alpha"</span>, <span class="tok-str">"mean_test_score"</span>, <span class="tok-str">"std_test_score"</span>]]
+      .sort_values(<span class="tok-str">"mean_test_score"</span>, ascending=<span class="tok-kw">False</span>))</pre>
+    </div>
+
+    <div class="callout warn">
+      <div class="lbl">⚠️ Two mistakes that quietly invalidate your results</div>
+      <p><strong>Scaling before splitting:</strong> calling <code>StandardScaler().fit(X)</code> on the whole dataset before splitting lets statistics from the test set leak into training. Always scale inside the pipeline, fit only on each training fold.<br><strong>Tuning on the test set:</strong> if you ever change a hyperparameter because the test score improved, the test set has become a second validation set, and your final number is no longer trustworthy. Use CV for every decision; touch the test set exactly once.</p>
+    </div>
+  </div>
+</section>
+
+<section id="cheatsheet">
+  <div class="wrap">
+    <div class="kicker">Keep this nearby</div>
+    <h2>Cheat sheet</h2>
+    <div class="cheat-grid">
+      <div class="cheat-card">
+        <h4>Signs of underfitting</h4>
+        <ul>
+          <li>Training score is already mediocre</li>
+          <li>Train and test scores are both low and close together</li>
+          <li>Fix: a more flexible model, fewer/weaker regularization, more relevant features</li>
+        </ul>
+      </div>
+      <div class="cheat-card">
+        <h4>Signs of overfitting</h4>
+        <ul>
+          <li>Training score is excellent</li>
+          <li>Test (or CV) score is noticeably worse</li>
+          <li>Fix: more data, stronger regularization, a simpler model, fewer features</li>
+        </ul>
+      </div>
+      <div class="cheat-card">
+        <h4>Reach for GridSearchCV when…</h4>
+        <ul>
+          <li>You have 1–2 hyperparameters</li>
+          <li>Each has a small number of sensible candidate values</li>
+          <li>You want a guarantee over that exact grid</li>
+        </ul>
+      </div>
+      <div class="cheat-card">
+        <h4>Reach for RandomizedSearchCV when…</h4>
+        <ul>
+          <li>Several hyperparameters, or continuous ranges</li>
+          <li>The full grid would be too expensive to run</li>
+          <li>You're exploring before narrowing down</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 style="margin-top:2rem;">The five-step recipe</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Step</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>Split off a test set and don't touch it again.</td></tr>
+          <tr><td>2</td><td>Build a Pipeline (scaler + model) so preprocessing never leaks across folds.</td></tr>
+          <tr><td>3</td><td>Define a hyperparameter grid or distribution.</td></tr>
+          <tr><td>4</td><td>Run GridSearchCV or RandomizedSearchCV with cross-validation to pick the best setting.</td></tr>
+          <tr><td>5</td><td>Evaluate <code>best_estimator_</code> on the test set exactly once — that's the number you report.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Datasets: <code>student_exam_scores.csv</code> and <code>customer_churn.csv</code>, synthetic data generated for this lesson. Built for a hands-on class following model evaluation fundamentals.
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- shared helpers ----------
+  function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+  function rmse(yTrue, yPred){
+    let s = 0;
+    for(let i=0;i<yTrue.length;i++){ const d = yTrue[i]-yPred[i]; s += d*d; }
+    return Math.sqrt(s/yTrue.length);
+  }
+
+  // Solve a symmetric linear system (A x = b) via Gaussian elimination with partial pivoting.
+  function solveLinear(A, b){
+    const n = A.length;
+    const M = A.map((row,i)=>row.concat([b[i]]));
+    for(let col=0; col<n; col++){
+      let piv = col;
+      for(let r=col+1; r<n; r++){ if(Math.abs(M[r][col]) > Math.abs(M[piv][col])) piv = r; }
+      [M[col], M[piv]] = [M[piv], M[col]];
+      const pv = M[col][col] || 1e-12;
+      for(let c=col; c<=n; c++) M[col][c] /= pv;
+      for(let r=0; r<n; r++){
+        if(r===col) continue;
+        const factor = M[r][col];
+        if(factor===0) continue;
+        for(let c=col; c<=n; c++) M[r][c] -= factor*M[col][c];
+      }
+    }
+    return M.map(row=>row[n]);
+  }
+
+  // Fit polynomial of given degree to (x,y) using normalized x in [-1,1]; returns {coefs, predict(x)}
+  function fitPoly(xs, ys, degree){
+    const xMin=-3, xMax=3;
+    const norm = x => 2*(x-xMin)/(xMax-xMin) - 1;
+    const n = xs.length, d = degree+1;
+    // Build normal equations X^T X and X^T y
+    const XtX = Array.from({length:d}, ()=>new Array(d).fill(0));
+    const Xty = new Array(d).fill(0);
+    const rows = xs.map(x=>{
+      const xn = norm(x);
+      const r = new Array(d);
+      let p = 1;
+      for(let k=0;k<d;k++){ r[k]=p; p*=xn; }
+      return r;
+    });
+    for(let i=0;i<n;i++){
+      const r = rows[i];
+      for(let a=0;a<d;a++){
+        Xty[a] += r[a]*ys[i];
+        for(let bI=0; bI<d; bI++) XtX[a][bI] += r[a]*r[bI];
+      }
+    }
+    // tiny ridge for numerical stability at high degree
+    for(let k=0;k<d;k++) XtX[k][k] += 1e-6;
+    const coefs = solveLinear(XtX, Xty);
+    function predict(x){
+      const xn = norm(x);
+      let p=1, y=0;
+      for(let k=0;k<d;k++){ y += coefs[k]*p; p*=xn; }
+      return y;
+    }
+    return {coefs, predict};
+  }
+
+  // ---------- sample data (deterministic) ----------
+  const xTrain = [-3.0000,-2.8286,-2.6571,-2.4857,-2.3143,-2.1429,-1.1143,-0.6000,-0.4286,-0.2571,0.0857,0.2571,0.9429,1.1143,1.2857,1.4571,1.6286,1.8000,2.1429,2.6571,2.8286,3.0000];
+  const yTrain = [0.1234,0.1638,-0.1099,-0.4547,-0.5486,-0.9405,-1.4840,-1.1582,-0.6747,-0.9178,-0.3485,0.1804,1.5913,1.6278,1.5217,0.7855,1.1911,1.1293,0.2344,-0.1933,0.2169,-0.3491];
+  const xTest = [-1.9714,-1.8000,-1.6286,-1.4571,-1.2857,-0.9429,-0.7714,-0.0857,0.4286,0.6000,0.7714,1.9714,2.3143,2.4857];
+  const yTest = [-0.8932,-0.7676,-1.4797,-1.6639,-1.4369,-1.4858,-1.6293,-0.3120,0.3537,1.0842,1.0139,0.9418,0.2876,-0.0686];
+
+  // ---------- generic canvas plot for the poly demos ----------
+  function drawPolyPlot(canvas, degree, opts){
+    const ctx = canvas.getContext("2d");
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0,0,W,H);
+    const pad = 28;
+    const xMin=-3.3, xMax=3.3, yMin=-2.6, yMax=2.6;
+    const sx = x => pad + (x-xMin)/(xMax-xMin) * (W-2*pad);
+    const sy = y => H-pad - (y-yMin)/(yMax-yMin) * (H-2*pad);
+
+    const border = cssVar('--border'), muted = cssVar('--muted');
+    ctx.strokeStyle = border; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pad, sy(0)); ctx.lineTo(W-pad, sy(0)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(sx(0), pad); ctx.lineTo(sx(0), H-pad); ctx.stroke();
+
+    const fit = fitPoly(xTrain, yTrain, degree);
+
+    // curve
+    ctx.strokeStyle = cssVar('--accent'); ctx.lineWidth = 2.5; ctx.beginPath();
+    for(let i=0;i<=200;i++){
+      const x = xMin + (xMax-xMin)*i/200;
+      const y = fit.predict(x);
+      const px = sx(x), py = sy(Math.max(yMin,Math.min(yMax,y)));
+      if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+    }
+    ctx.stroke();
+
+    // train points
+    ctx.fillStyle = cssVar('--under');
+    xTrain.forEach((x,i)=>{ ctx.beginPath(); ctx.arc(sx(x), sy(yTrain[i]), 4, 0, Math.PI*2); ctx.fill(); });
+
+    if(opts && opts.showTest){
+      ctx.fillStyle = cssVar('--over');
+      xTest.forEach((x,i)=>{ ctx.beginPath(); ctx.arc(sx(x), sy(yTest[i]), 4, 0, Math.PI*2); ctx.fill(); });
+    }
+
+    return fit;
+  }
+
+  // ---------- Panel 1: params vs hyperparams demo ----------
+  const degSlider = document.getElementById('degSlider');
+  const degVal = document.getElementById('degVal');
+  const polyCanvas = document.getElementById('polyCanvas');
+  const trainRmseEl = document.getElementById('trainRmse');
+  const coefOut = document.getElementById('coefOut');
+
+  function updatePanel1(){
+    const degree = parseInt(degSlider.value, 10);
+    degVal.textContent = degree;
+    const fit = drawPolyPlot(polyCanvas, degree, {showTest:false});
+    const predTrain = xTrain.map(fit.predict);
+    trainRmseEl.textContent = rmse(yTrain, predTrain).toFixed(3);
+    coefOut.textContent = fit.coefs.map((c,i)=>`  w${i} = ${c.toFixed(3)}`).join('\n');
+  }
+  degSlider.addEventListener('input', updatePanel1);
+  updatePanel1();
+
+  // ---------- Panel 2: overfit/underfit demo with error curve ----------
+  const degSlider2 = document.getElementById('degSlider2');
+  const degVal2 = document.getElementById('degVal2');
+  const polyCanvas2 = document.getElementById('polyCanvas2');
+  const trainRmse2El = document.getElementById('trainRmse2');
+  const testRmse2El = document.getElementById('testRmse2');
+  const errCurve = document.getElementById('errCurve');
+  const fitVerdict = document.getElementById('fitVerdict');
+
+  // precompute train/test error for degrees 1..9 once
+  const degrees = [1,2,3,4,5,6,7,8,9];
+  const trainErrs = [], testErrs = [];
+  degrees.forEach(d=>{
+    const fit = fitPoly(xTrain, yTrain, d);
+    trainErrs.push(rmse(yTrain, xTrain.map(fit.predict)));
+    testErrs.push(rmse(yTest, xTest.map(fit.predict)));
+  });
+
+  function drawErrCurve(currentDeg){
+    const ctx = errCurve.getContext('2d');
+    const W = errCurve.width, H = errCurve.height;
+    ctx.clearRect(0,0,W,H);
+    const pad = 22;
+    const allVals = trainErrs.concat(testErrs);
+    const yMax = Math.max(...allVals) * 1.15;
+    const sx = i => pad + (i)/(degrees.length-1) * (W-2*pad);
+    const sy = v => H-pad - (v/yMax) * (H-2*pad);
+
+    ctx.strokeStyle = cssVar('--border'); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pad, H-pad); ctx.lineTo(W-pad, H-pad); ctx.stroke();
+
+    function drawLine(arr, color){
+      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+      arr.forEach((v,i)=>{ const px=sx(i), py=sy(v); if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); });
+      ctx.stroke();
+      ctx.fillStyle = color;
+      arr.forEach((v,i)=>{ ctx.beginPath(); ctx.arc(sx(i), sy(v), 2.5, 0, Math.PI*2); ctx.fill(); });
+    }
+    drawLine(trainErrs, cssVar('--under'));
+    drawLine(testErrs, cssVar('--over'));
+
+    // marker for current degree
+    const idx = degrees.indexOf(currentDeg);
+    if(idx>-1){
+      ctx.strokeStyle = cssVar('--fg'); ctx.setLineDash([3,3]); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(sx(idx), pad); ctx.lineTo(sx(idx), H-pad); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  function updatePanel2(){
+    const degree = parseInt(degSlider2.value, 10);
+    degVal2.textContent = degree;
+    drawPolyPlot(polyCanvas2, degree, {showTest:true});
+    const idx = degrees.indexOf(degree);
+    trainRmse2El.textContent = trainErrs[idx].toFixed(3);
+    testRmse2El.textContent = testErrs[idx].toFixed(3);
+    drawErrCurve(degree);
+
+    let verdict;
+    if(degree <= 2) verdict = `<b>Underfitting territory:</b> both errors are relatively high — the line is too simple to follow the curve.`;
+    else if(degree <= 5) verdict = `<b>Good fit:</b> train and test error are both low and reasonably close — this degree generalizes well.`;
+    else verdict = `<b>Overfitting territory:</b> train error keeps dropping, but test error has climbed back up — the curve is chasing noise.`;
+    fitVerdict.innerHTML = verdict;
+  }
+  degSlider2.addEventListener('input', updatePanel2);
+  updatePanel2();
+
+  // ---------- Panel: reshuffle single split instability ----------
+  (function(){
+    // 50 synthetic points from the same family, re-splittable
+    const allX = [], allY = [];
+    let seed = 11;
+    function rand(){ seed = (seed*9301+49297) % 233280; return seed/233280; }
+    for(let i=0;i<50;i++){
+      const x = -3 + 6*rand();
+      const y = 1.2*Math.sin(1.5*x) + 0.35*x + (rand()-0.5)*0.7;
+      allX.push(x); allY.push(y);
+    }
+    const btn = document.getElementById('reshuffleBtn');
+    const rmseEl = document.getElementById('shuffleRmse');
+    const rangeEl = document.getElementById('shuffleRange');
+    let seen = [];
+    function shuffleSplit(){
+      const idx = allX.map((_,i)=>i);
+      for(let i=idx.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [idx[i],idx[j]]=[idx[j],idx[i]]; }
+      const nTrain = Math.round(allX.length*0.8);
+      const trainI = idx.slice(0,nTrain), valI = idx.slice(nTrain);
+      const xtr = trainI.map(i=>allX[i]), ytr = trainI.map(i=>allY[i]);
+      const xva = valI.map(i=>allX[i]), yva = valI.map(i=>allY[i]);
+      const fit = fitPoly(xtr, ytr, 4);
+      const score = rmse(yva, xva.map(fit.predict));
+      seen.push(score);
+      rmseEl.textContent = score.toFixed(3);
+      rangeEl.textContent = `${Math.min(...seen).toFixed(2)} – ${Math.max(...seen).toFixed(2)}`;
+    }
+    btn.addEventListener('click', shuffleSplit);
+    shuffleSplit();
+  })();
+
+  // ---------- K-fold step visualization ----------
+  (function(){
+    const kSlider = document.getElementById('kSlider');
+    const kVal = document.getElementById('kVal');
+    const foldViz = document.getElementById('foldViz');
+    const prevBtn = document.getElementById('prevFold');
+    const nextBtn = document.getElementById('nextFold');
+    const readout = document.getElementById('foldReadout');
+    const meanCv = document.getElementById('meanCv');
+    const stdCv = document.getElementById('stdCv');
+    let current = 0;
+
+    function syntheticFoldScores(k){
+      // deterministic pseudo-scores so numbers are stable per k
+      const scores = [];
+      for(let i=0;i<k;i++){
+        scores.push(0.78 + 0.05*Math.sin(i*1.7 + k) + 0.02*Math.cos(i*3.1));
+      }
+      return scores;
+    }
+
+    function render(){
+      const k = parseInt(kSlider.value,10);
+      kVal.textContent = k;
+      if(current >= k) current = 0;
+      foldViz.innerHTML = '';
+      const row = document.createElement('div');
+      row.className = 'fold-row';
+      for(let i=0;i<k;i++){
+        const cell = document.createElement('div');
+        cell.className = 'fold-cell ' + (i===current ? 'val' : 'train');
+        cell.title = (i===current ? 'Validation fold' : 'Training fold');
+        row.appendChild(cell);
+      }
+      foldViz.appendChild(row);
+      readout.textContent = `Round ${current+1} of ${k}: training on ${k-1} folds, validating on fold ${current+1}.`;
+
+      const scores = syntheticFoldScores(k);
+      const mean = scores.reduce((a,b)=>a+b,0)/scores.length;
+      const variance = scores.reduce((a,b)=>a+(b-mean)*(b-mean),0)/scores.length;
+      meanCv.textContent = mean.toFixed(3);
+      stdCv.textContent = Math.sqrt(variance).toFixed(3);
+    }
+    kSlider.addEventListener('input', ()=>{ current = 0; render(); });
+    prevBtn.addEventListener('click', ()=>{ const k=parseInt(kSlider.value,10); current = (current-1+k)%k; render(); });
+    nextBtn.addEventListener('click', ()=>{ const k=parseInt(kSlider.value,10); current = (current+1)%k; render(); });
+    render();
+  })();
+
+  // ---------- Grid vs Randomized search visualization ----------
+  (function(){
+    const alphas = [0.01, 0.1, 1, 10, 50, 100];
+    const ks = [2, 6, 11, 16, 21, 26, 29];
+    const grid = document.getElementById('searchGrid');
+    grid.style.gridTemplateRows = `repeat(${ks.length}, 44px)`;
+    const checkedEl = document.getElementById('searchChecked');
+    const bestEl = document.getElementById('searchBest');
+    const fitsEl = document.getElementById('searchFits');
+
+    // deterministic quality surface with one clear optimum
+    function quality(ai, ki){
+      const base = 0.9 - 0.06*Math.pow(ai-1,2) - 0.025*Math.pow(ki-2,2);
+      const wobble = 0.015*Math.sin(ai*2+ki) ;
+      return Math.max(0.3, Math.min(0.95, base+wobble));
+    }
+
+    const cells = [];
+    for(let ki=0; ki<ks.length; ki++){
+      for(let ai=0; ai<alphas.length; ai++){
+        const div = document.createElement('div');
+        div.className = 'cell';
+        div.dataset.ai = ai; div.dataset.ki = ki;
+        grid.appendChild(div);
+        cells.push(div);
+      }
+    }
+
+    function colorFor(q){
+      // map 0.3..0.95 to a cool->warm background using accent + over tokens
+      const t = (q-0.3)/0.65;
+      return `color-mix(in srgb, var(--good) ${Math.round(t*100)}%, var(--surface-2))`;
+    }
+
+    function resetGrid(){
+      cells.forEach(c=>{ c.className='cell'; c.style.background=''; c.textContent=''; });
+      checkedEl.textContent = '0';
+      bestEl.textContent = '–';
+      fitsEl.textContent = '0';
+    }
+
+    function finish(checkedCells){
+      let best = -1, bestCell = null;
+      checkedCells.forEach(c=>{
+        const ai = +c.dataset.ai, ki = +c.dataset.ki;
+        const q = quality(ai,ki);
+        c.classList.add('hit');
+        c.style.background = colorFor(q);
+        if(q>best){ best=q; bestCell=c; }
+      });
+      if(bestCell) bestCell.classList.add('best');
+      checkedEl.textContent = checkedCells.length;
+      bestEl.textContent = best>-1 ? best.toFixed(3) : '–';
+      fitsEl.textContent = (checkedCells.length*5);
+    }
+
+    document.getElementById('runGrid').addEventListener('click', ()=>{
+      resetGrid();
+      finish(cells.slice());
+    });
+    document.getElementById('runRandom').addEventListener('click', ()=>{
+      resetGrid();
+      const pool = cells.slice();
+      const picked = [];
+      const nIter = 10;
+      for(let i=0;i<nIter && pool.length;i++){
+        const idx = Math.floor(Math.random()*pool.length);
+        picked.push(pool.splice(idx,1)[0]);
+      }
+      finish(picked);
+    });
+    document.getElementById('resetSearch').addEventListener('click', resetGrid);
+    resetGrid();
+  })();
+
+  // ---------- copy buttons ----------
+  document.querySelectorAll('.copy-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const target = document.getElementById(btn.dataset.copy);
+      const text = target.innerText;
+      const done = ()=>{ const old = btn.textContent; btn.textContent='Copied!'; setTimeout(()=>btn.textContent=old, 1200); };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done).catch(()=>{
+          const sel = window.getSelection(); const range = document.createRange();
+          range.selectNodeContents(target); sel.removeAllRanges(); sel.addRange(range);
+          done();
+        });
+      }
+    });
+  });
+})();
+</script>
+
+</body></html>
